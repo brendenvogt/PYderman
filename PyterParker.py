@@ -1,12 +1,12 @@
-from bs4 import BeautifulSoup
-import os
-import shutil
-
 import requests
 import urllib.request
-
-import uuid
+from bs4 import BeautifulSoup
 from datetime import datetime
+import os
+import uuid
+import shutil
+
+
 
 class PyterParker():
 
@@ -23,38 +23,37 @@ class PyterParker():
         self._graphDir = "graph"
 
     def run(self):
-        self.grab(self.url, 0)
+        html = self.grab(self.url)
+        self.parse(url, html)
 
-    def grab(self, url, depth):
-        #get html content
+    def grab(self, url):
         html = ""
         if self.req == "urllib":
             html = urllib.request.urlopen(self.url).read()
         if self.req == "requests":
             html = requests.get(self.url).content
-        #parse html
-        self.parse(url, html)
+        return html
 
-    def parse(self, source, content):
-        #parse html
+    def parse(self, url, content):
         soup = BeautifulSoup(content, 'html.parser')
-        self.parseImgs(source, soup)
-        self.parseSubUrls(source, soup)
-        # print(soup.prettify())
+        self.parseImgs(url, soup)
+        self.parseUrls(url, soup)
 
-    def parseImgs(self, source, soup):
+    # Parse Methods
+
+    def parseImgs(self, url, soup):
         imgs = soup.find_all("img")
-        for i in imgs:
-            x = i.get("src") or i.get("data-lazyload")
-            self.imgUrls.append((source, x))
+        for img in imgs:
+            imgUrl = img.get("src") or img.get("data-lazyload")
+            self.imgUrls.append((url, imgUrl))
 
-    def parseSubUrls(self, source, soup):
-        imgs = soup.find_all("a")
-        for i in imgs:
-            x = i.get("href")
-            self.subUrls.append((source, x))
+    def parseUrls(self, url, soup):
+        links = soup.find_all("a")
+        for link in links:
+            linkUrl = link.get("href")
+            self.subUrls.append((url, linkUrl))
 
-    #todo def createGraph(): # create tree diagram
+    # Save Methods
 
     def saveImages(self):
         base = self.name+"/"+self._imgDir
@@ -77,17 +76,19 @@ class PyterParker():
             for i in self.subUrls:
                 writer.writerow(i)
 
+    # Helper
+
     def _getDateTime(self):
         return datetime.utcnow().strftime("%d-%m-%y-%H-%M-%S")
 
+
 if __name__ == "__main__":
-    print("hello")
+    print("My spider senses are tingling")
 
-    url = "https://www.amazon.com/TCL-49S405-49-Inch-Ultra-Smart/dp/B01MYGISTO/ref=sr_1_1_sspa?s=tv&ie=UTF8&qid=1536346649&sr=1-1-spons&keywords=tv&psc=1"
-    parser = PyterParker(url=url, name=None, req="urllib")
+    # url = "https://www.amazon.com/TCL-49S405-49-Inch-Ultra-Smart/dp/B01MYGISTO/ref=sr_1_1_sspa?s=tv&ie=UTF8&qid=1536346649&sr=1-1-spons&keywords=tv&psc=1"
+    url = "https://www.iherb.com/pr/p/11242"
+    parser = PyterParker(url=url, name=None, req="requests", crawlDepth=2)
     parser.run()
-
-    ###SAVE DIFFERENT TYPES OF OBJECTS
 
     ##IMAGES
     parser.saveImages()	
