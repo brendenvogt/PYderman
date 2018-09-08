@@ -4,7 +4,6 @@ import urllib.request
 from urllib.parse import urljoin
 from urllib.parse import urlsplit, urlunsplit
 
-
 from bs4 import BeautifulSoup
 from datetime import datetime
 import os
@@ -14,7 +13,7 @@ import shutil
 
 class PyterParker():
 
-    def __init__(self, name, req="urllib", crawlDepth=0):
+    def __init__(self, name=None, req="urllib", crawlDepth=0):
         self.name = name or self._getDateTime()
         self.url = url
         self.crawlDepth = crawlDepth
@@ -125,7 +124,7 @@ if __name__ == "__main__":
 
     # url = "https://www.amazon.com/TCL-49S405-49-Inch-Ultra-Smart/dp/B01MYGISTO/ref=sr_1_1_sspa?s=tv&ie=UTF8&qid=1536346649&sr=1-1-spons&keywords=tv&psc=1"
     url = "https://www.iherb.com/pr/p/11242"
-    parser = PyterParker(name=None, req="requests", crawlDepth=2)
+    parser = PyterParker(req="requests", crawlDepth=2)
     parser.run(url)
 
     # ##IMAGES
