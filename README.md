@@ -19,10 +19,17 @@ url = "https://www.google.com/"
 ```
 ##### Create Object and Set Config
 ```
-parser = Pyderman(url=url,req="requests", depth=1)
+parser = Pyderman(url=url, depth=1)
+```
 
-# req="requests" uses the python request http client
-# req="urllib" uses the python urllib http client
+##### Create Object and Set Config
+Using the Python [**Urllib**](https://docs.python.org/3/library/urllib.html) Http Client
+```
+parser = Pyderman(url=url,req="urllib" depth=1)
+```
+Using the Python [**Requests**](http://docs.python-requests.org/en/master) Http Client
+```
+parser = Pyderman(url=url,req="requests" depth=1)
 ```
 
 ##### Run
