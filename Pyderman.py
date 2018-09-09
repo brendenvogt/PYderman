@@ -21,7 +21,7 @@ class Scrape():
         self.urls = urls
         self.imgs = imgs
 
-class Spyderman():
+class Pyderman():
 
     def __init__(self, name=None, url="", req="urllib", depth=0):
         self.name = name or self._getDateTime()
@@ -196,7 +196,7 @@ if __name__ == "__main__":
 
     url = "https://www.google.com/"
 
-    parser = Spyderman(url=url,req="requests", depth=1)
+    parser = Pyderman(url=url,req="requests", depth=1)
     parser.run()
 
     ##IMAGES
