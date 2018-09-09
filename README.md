@@ -1,3 +1,6 @@
+<img src="https://github.com/brendenvogt/Spyderman/blob/master/NOTES/spyderman.png?raw=true" width="388"/>
+
+
 # sPYderman
 #### Your friendly neighborhood web spider; written in **Python**.
 This program scrapes and crawls the website you give it for links and images. It then proceeds to crawl every href url on that site for more images and links. Spyderman does this until it reaches `depth` levels. <br/>
