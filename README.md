@@ -37,3 +37,12 @@ parser.saveImages()
 #GRAPH
 parser.saveGraph()
 ```
+
+##### Result
+```
+Images
+<img src="https://github.com/brendenvogt/PYderman/blob/master/resources/imgsScreenshot.png?raw=true"/>
+
+Graph
+<img src="https://github.com/brendenvogt/PYderman/blob/master/resources/graphScreenshot.png?raw=true"/>
+```
