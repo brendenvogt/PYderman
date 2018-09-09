@@ -1,4 +1,4 @@
-<img src="https://raw.githubusercontent.com/brendenvogt/PYderman/master/resources/pyderman.svg" width="388"/>
+<img src="https://github.com/brendenvogt/PYderman/blob/master/resources/pyderman.png?raw=true" width="388"/>
 
 
 # PYderman
