@@ -1,11 +1,11 @@
 # PyterParker
 #### Your friendly neighborhood web spider; written in **Python**.
-This program scrapes and crawls the website you give it for links and images. It then proceeds to search every href link that it found for more images and links. PyterParker does this until it reaches `depth` levels. 
-Setting `depth=0` means no crawling, only scraping the provided `url`
-Setting `depth=1` means scrape and crawl only the direct links found on page
-
+This program scrapes and crawls the website you give it for links and images. It then proceeds to crawl every href url on that site for more images and links. PyterParker does this until it reaches `depth` levels. <br/>
+Setting `depth=0` means no crawling, only scraping that current page.<br/>
+Setting `depth=1` means scraping and crawling only the direct links from that page.<br/>
+Setting `depth=100` may set your computer on fire.
 ## Important Notes
-Friendly warning, set `depth` to a small number like `depth=0` or `depth=1`, otherwise you risk downloading a LOT of data.
+Friendly warning, set `depth` to a small number like `depth=0` or `depth=1`, otherwise you risk downloading a LOT of data.<br/>
 And be careful which sites you set this loose on.
 
 ## Usage 
@@ -20,7 +20,10 @@ parser = PyterParker(url=url,req="requests", depth=1)
 
 # req="requests" uses the python request http client
 # req="urllib" uses the python urllib http client
+```
 
+##### Run
+```
 parser.run()
 
 ```
