@@ -13,16 +13,15 @@ And be careful which sites you set this loose on.
 
 ## Usage 
 
-##### Set Start Url
+### Set Start Url
 ```python
 url = "https://www.google.com/"
 ```
-##### Create Object and Set Config
+### Create Object and Set Config
 ```
 parser = Pyderman(url=url, depth=1)
 ```
-
-##### Create Object and Set Config
+#### Alternate Declaration
 Using the Python [**Urllib**](https://docs.python.org/3/library/urllib.html) Http Client
 ```
 parser = Pyderman(url=url,req="urllib" depth=1)
