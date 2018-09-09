@@ -9,15 +9,28 @@ from datetime import datetime
 import os
 import uuid
 import shutil
+import csv
 
+from slugify import slugify
+from tqdm import tqdm 
+
+class Scrape():
+
+    def __init__(self, source="", urls=[], imgs=[]):
+        self.source = source
+        self.urls = urls
+        self.imgs = imgs
 
 class PyterParker():
 
-    def __init__(self, name=None, req="urllib", crawlDepth=0):
+    def __init__(self, name=None, url="", req="urllib", depth=0):
         self.name = name or self._getDateTime()
         self.url = url
-        self.crawlDepth = crawlDepth
+        self.depth = depth
         self.req = req
+
+        self.seen = set()
+        self.scrapes = []
 
         self.imgUrls = []
         self.subUrls = []
@@ -25,80 +38,139 @@ class PyterParker():
         self._imgDir = "img"
         self._graphDir = "graph"
 
-    def run(self, url):
+
+    def run(self):
+        self.crawl(self.url, self.depth)
+
+    def crawl(self, url, depth):
+        if url in self.seen:
+            return
+        self.seen.add(url)
+
+        scrape = self.scrape(url)
+        self.scrapes.append(scrape)
+        
+        if (depth != 0):
+            toSearch = self._filter(scrape.urls, self.seen)
+            for i in toSearch:
+                self.crawl(i, depth-1)
+
+    def scrape(self, url):
         html = self.grab(url)
-        self.parse(url, html)
+        soup = BeautifulSoup(html, 'html.parser')
+
+        scrape = Scrape(source=url)
+
+        # url parsing
+        scrape.urls = self.parseUrls(self._getBase(url), soup)
+        # self._printAll(scrape.urls)
+
+        # imgs 
+        scrape.imgs = self.parseImgs(self._getBase(url), soup)
+        # self._printAll(scrape.imgs)
+
+        return scrape
+
 
     def grab(self, url):
         html = ""
-        if self.req == "urllib":
-            html = urllib.request.urlopen(self.url).read()
-        if self.req == "requests":
-            html = requests.get(self.url).content
-        return html
-
-    def parse(self, url, content):
-        # soup parsing
-        soup = BeautifulSoup(content, 'html.parser')
-        
-        # url parsing
-        urls = self.parseUrls(self._getBase(url), soup)
-        self._printAll(urls)
-        
-        # imgs 
-        imgs = self.parseImgs(soup)
-        self._printAll(imgs)
+        if url == None or url == "":
+            return html
+        try:
+            if self.req == "urllib":
+                html = urllib.request.urlopen(url).read()
+            if self.req == "requests":
+                html = requests.get(url).content
+            return html
+        except:
+            return html
 
     # Parse Methods
 
-    def parseImgs(self, soup):
-        imgs = soup.find_all("img")
-        return [img.get("src") or img.get("data-lazyload") for img in imgs]
-        
+    def parseImgs(self, urlbase, soup):
+        urls = soup.find_all("img")
+        urls = [url.get("src") or url.get("data-lazyload") for url in urls]
+        urls = self.clean(urls, urlbase)
+        return urls
+
     def parseUrls(self, urlbase, soup):
-        links = soup.find_all("a")
-        cleaned = []
-        for link in links:
-            link = link.get("href")
-            if link and self._isRelative(link):
-                link = urljoin(url, link[1:])
-            if link and link != "":
-                cleaned.append(link)
-        return cleaned
+        urls = soup.find_all("a")
+        urls = [url.get("href") for url in urls]
+        urls = self.clean(urls, urlbase)
+        return urls
+        
+    def clean(self, urls, urlbase):
+        cleaned = set()
+        for url in urls:
+            if url and self._isRelative(url):
+                url = urljoin(urlbase, url)
+            if url and len(url) > 2 and url[:2] == "//":
+                url = "http:"+url
+            if url and url != "":
+                cleaned.add(url)
+        return list(cleaned)
 
     # Save Methods
 
     def saveImages(self):
-        base = self.name+"/"+self._imgDir
+        print("Saving All Images")
+        for scrape in tqdm(self.scrapes):
+            print(f"Saving images from: {scrape.source}")
+            self.saveImagesForScrape(scrape)
+
+    def saveImagesForScrape(self, scrape):
+        base = self._slugify(scrape.source)
+        source = self._slugify(self.url)
+        base = source+"/"+self._imgDir+"/"+base
         if not os.path.exists(base):
             os.makedirs(base)
-        for imgTup in self.imgUrls:	
-            img = imgTup[1]
-            response = requests.get(img, stream=True)
-            with open(base+"/"+str(uuid.uuid4())+"_"+img[img.rfind("/")+1:], 'wb') as out_file:
-                shutil.copyfileobj(response.raw, out_file)
-            del response
+        
+        for img in scrape.imgs:	
+            try:
+                response = requests.get(img, stream=True)
+                with open(base+"/"+str(uuid.uuid4())+"_"+img[img.rfind("/")+1:], 'wb') as out_file:
+                    shutil.copyfileobj(response.raw, out_file)
+                del response
+            except Exception as e:
+                print(f"error downloading: {img} with error {e}")
 
     def saveGraph(self):
-        import csv
-        base = self.name+"/"+self._graphDir
+        print("Saving All Graphs")
+        for scrape in tqdm(self.scrapes):
+            print(f"Saving graph from: {scrape.source}")
+            self.saveGraphForScrape(scrape)
+
+    def saveGraphForScrape(self, scrape):
+        slug = self._slugify(scrape.source)
+        source = self._slugify(self.url)
+        base = source+"/"+self._graphDir+"/"+slug
         if not os.path.exists(base):
             os.makedirs(base)
+
         with open(base+"/"+'graph.csv', 'w', newline='\n') as csvfile:
             writer = csv.writer(csvfile)
-            for i in self.subUrls:
-                writer.writerow(i)
+            for url in scrape.urls:
+                writer.writerow([slug,scrape.source,url])
 
     # Helper
+    
+    def _slugify(self, string):
+        return slugify(string)
+
+    def _filter(self, source, destination):
+        result = []
+        for i in source:
+            if i not in destination:
+                result.append(i)
+        return result
 
     def _getBase(self, url):
         split_url = urlsplit(url)
-        clean_path = "".join(split_url.path.rpartition("/")[:-1])
         clean_url = urlunsplit((split_url.scheme, split_url.netloc, "", "", ""))
         return clean_url
 
     def _isRelative(self, url):
-        return url[0] == "#" or url[0] == "/"
+        return self._getBase(url) == ""
 
     def _getDateTime(self):
         return datetime.utcnow().strftime("%d-%m-%y-%H-%M-%S")
@@ -120,14 +192,15 @@ class PyterParker():
             return False
 
 if __name__ == "__main__":
-    print("My spider senses are tingling")
+    print("My spidey senses are tingling")
 
-    # url = "https://www.amazon.com/TCL-49S405-49-Inch-Ultra-Smart/dp/B01MYGISTO/ref=sr_1_1_sspa?s=tv&ie=UTF8&qid=1536346649&sr=1-1-spons&keywords=tv&psc=1"
-    url = "https://www.iherb.com/pr/p/11242"
-    parser = PyterParker(req="requests", crawlDepth=2)
-    parser.run(url)
+    url = "https://www.google.com/"
 
-    # ##IMAGES
-    # parser.saveImages()	
-    # ##GRAPH
-    # parser.saveGraph()
+    parser = PyterParker(url=url,req="requests", depth=1)
+    parser.run()
+
+    ##IMAGES
+    parser.saveImages()	
+
+    ##GRAPH
+    parser.saveGraph()
