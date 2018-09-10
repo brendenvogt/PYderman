@@ -44,3 +44,10 @@ parser.saveImages()
 parser.saveGraph()
 ```
 
+## Result 
+
+### Images
+<img src="https://github.com/brendenvogt/PYderman/blob/master/resources/imgScreenshot.png?raw=true"/>
+
+### Graph
+<img src="https://github.com/brendenvogt/PYderman/blob/master/resources/graphScreenshot.png?raw=true"/>
