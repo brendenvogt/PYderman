@@ -16,28 +16,48 @@ from tqdm import tqdm
 
 class Scrape():
 
-    def __init__(self, source="", urls=[], imgs=[]):
+    def __init__(self, source="", urls=[], htmls=[], txts=[], pdfs=[], csvs=[], xmls=[], imgs=[], mp3s=[], mp4s=[]):
         self.source = source
         self.urls = urls
+        # standard
+        self.htmls = htmls
+        self.txts = txts
+        self.pdfs = pdfs
+        # data
+        self.csvs = csvs
+        self.xmls = xmls
+        # media
         self.imgs = imgs
+        self.mp3s = mp3s
+        self.mp4s = mp4s
+
+    def report(self):
+        print(f"Scrape Report from: {self.source}")
+        print(f"- number of urls: {len(self.urls)}")
+        print(f"- number of html urls: {len(self.htmls)}")
+        print(f"- number of txt urls: {len(self.txts)}")
+        print(f"- number of txt urls: {len(self.pdfs)}")
+        print(f"- number of csv urls: {len(self.csvs)}")
+        print(f"- number of xml urls: {len(self.xmls)}")
+        print(f"- number of img urls: {len(self.imgs)}")
+        print(f"- number of mp3 urls: {len(self.mp3s)}")
+        print(f"- number of mp4 urls: {len(self.mp4s)}")
 
 class Pyderman():
 
-    def __init__(self, name=None, url="", req="urllib", depth=0):
+    def __init__(self, name=None, url="", req="requests", depth=0, stayInternal=False):
         self.name = name or self._getDateTime()
         self.url = url
         self.depth = depth
         self.req = req
+        self.stayInternal = stayInternal
 
         self.seen = set()
         self.scrapes = []
 
-        self.imgUrls = []
-        self.subUrls = []
-
         self._imgDir = "img"
         self._graphDir = "graph"
-
+        self._csvDir = "csv"
 
     def run(self):
         self.crawl(self.url, self.depth)
@@ -61,13 +81,19 @@ class Pyderman():
 
         scrape = Scrape(source=url)
 
+        urlBase = self._getBase(url)
+
         # url parsing
-        scrape.urls = self.parseUrls(self._getBase(url), soup)
+        scrape.urls = self.parseUrls(urlBase, soup)
         # self._printAll(scrape.urls)
 
-        # imgs 
-        scrape.imgs = self.parseImgs(self._getBase(url), soup)
-        # self._printAll(scrape.imgs)
+        # # imgs 
+        scrape.imgs = self.parseImgs(urlBase, soup)
+        # # self._printAll(scrape.imgs)
+
+        # csvs 
+        scrape.csvs = self.parseCsvs(urlBase, soup)
+        # self._printAll(scrape.csvs)
 
         return scrape
 
@@ -99,15 +125,39 @@ class Pyderman():
         urls = self.clean(urls, urlbase)
         return urls
         
+    def parseTxts(self, urlbase, soup):
+        pass        
+
+    def parseXmls(self, urlbase, soup):
+        pass
+
+    def parseCsvs(self, urlbase, soup):
+        urls = soup.find_all("a")
+        urls = [url.get("href") for url in urls]
+        urls = [url if self._isType(url, ".csv") else None for url in urls]
+        urls = self.clean(urls, urlbase)
+        return urls
+        
+    def parsePdfs(self,urlbase, soup):
+        pass
+
     def clean(self, urls, urlbase):
         cleaned = set()
         for url in urls:
-            if url and self._isRelative(url):
-                url = urljoin(urlbase, url)
-            if url and len(url) > 2 and url[:2] == "//":
-                url = "http:"+url
-            if url and url != "":
-                cleaned.add(url)
+            if url:
+                
+                if self._isRelative(url):
+                    url = urljoin(urlbase, url)
+                
+                if len(url) > 2 and url[:2] == "//":
+                    url = "http:"+url
+                
+                if url != "":
+                    if self.stayInternal == True:
+                        if self._getDomain(url) != self._getDomain(urlbase):
+                            continue
+                    cleaned.add(url)
+
         return list(cleaned)
 
     # Save Methods
@@ -152,6 +202,29 @@ class Pyderman():
             for url in scrape.urls:
                 writer.writerow([slug,scrape.source,url])
 
+    def saveCsv(self):
+        print("Saving All Csvs")
+        for scrape in tqdm(self.scrapes):
+            print(f"Saving csv from: {scrape.source}")
+            self.saveCsvForScrape(scrape)
+
+    def saveCsvForScrape(self, scrape):
+        slug = self._slugify(scrape.source)
+        source = self._slugify(self.url)
+        base = source+"/"+self._csvDir+"/"+slug
+        if not os.path.exists(base):
+            os.makedirs(base)
+
+        for file in scrape.csvs: 
+            csvSlug = self._slugify(file)    
+            try:
+                response = requests.get(file, stream=True)
+                with open(base+"/"+csvSlug+".csv", 'wb') as out_file:
+                    shutil.copyfileobj(response.raw, out_file)
+                del response
+            except Exception as e:
+                print(f"error downloading: {file} with error {e}")
+
     # Helper
     
     def _slugify(self, string):
@@ -163,6 +236,10 @@ class Pyderman():
             if i not in destination:
                 result.append(i)
         return result
+
+    def _getDomain(self, url):
+        split_url = urlsplit(url)
+        return split_url.netloc
 
     def _getBase(self, url):
         split_url = urlsplit(url)
@@ -191,16 +268,41 @@ class Pyderman():
         except:
             return False
 
+    def _getExtension(self, url):
+        foundExt = os.path.splitext(url)
+        return foundExt[1]
+
+    def _isType(self, url, ext):
+        foundExt = os.path.splitext(url)
+        return foundExt[1] == ext
+
+    def _hasExtension(self, url):
+        foundExt = os.path.splitext(url)
+        return foundExt[1] != ""
+
 if __name__ == "__main__":
     print("My spidey senses are tingling")
 
-    url = "https://www.google.com/"
+    # url = "https://www.google.com/"
+    url = "https://support.spatialkey.com/spatialkey-sample-csv-data/"
 
-    parser = Pyderman(url=url,req="requests", depth=1)
+    parser = Pyderman(url=url, depth=0)
     parser.run()
 
     ##IMAGES
-    parser.saveImages()	
+    # parser.saveImages()	
 
     ##GRAPH
-    parser.saveGraph()
+    # parser.saveGraph()
+
+    ##CSV
+    # parser.saveCsv()
+
+    ##Print Out Report 
+    for scrape in parser.scrapes:
+        scrape.report()
+
+    # TODO
+    # 1. Be able to limit crawling to internal links vs internal and external links
+    # 2. Be able to scrape for files such as txt, csv, and xml
+
