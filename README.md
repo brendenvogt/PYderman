@@ -3,7 +3,8 @@
 
 # PYderman
 #### Your friendly neighborhood web spider; written in **Python**.
-This program scrapes and crawls the website you give it for links and images. It then proceeds to crawl every href url on that site for more images and links. Pyderman does this until it reaches `depth` levels. <br/>
+This program scrapes and crawls the website you give it for links and files. It then proceeds to crawl every href url on that site for more links and files. Pyderman does this until it reaches `depth` levels. <br/>
+Pyderman supports image files, .mp3, .mp4, .html, .txt, .pdf, .csv, and .xml files.<br/>
 Setting `depth=0` means no crawling, only scraping that current page.<br/>
 Setting `depth=1` means scraping and crawling the current page, and the direct links from that page.<br/>
 Setting `depth=100` may set your computer on fire. 😂
@@ -40,8 +41,30 @@ parser.run()
 ```
 #IMAGES
 parser.saveImages()	
+
 #GRAPH
 parser.saveGraph()
+
+##MP3
+parser.saveMp3()
+
+##MP4
+parser.saveMp4()
+
+##HTML
+parser.saveHtml()
+
+##TXT
+parser.saveTxt()
+
+##PDF
+parser.savePdf()
+
+##CSV
+parser.saveCsv()
+
+##XML
+parser.saveXml()
 ```
 
 ## Result 

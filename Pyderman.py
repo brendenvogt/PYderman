@@ -16,9 +16,14 @@ from tqdm import tqdm
 
 class Scrape():
 
-    def __init__(self, source="", urls=[], htmls=[], txts=[], pdfs=[], csvs=[], xmls=[], imgs=[], mp3s=[], mp4s=[]):
+    def __init__(self, source="", urls=[], files=[], htmls=[], txts=[], pdfs=[], csvs=[], xmls=[], imgs=[], mp3s=[], mp4s=[]):
         self.source = source
         self.urls = urls
+        self.files = files
+        # media
+        self.imgs = imgs
+        self.mp3s = mp3s
+        self.mp4s = mp4s
         # standard
         self.htmls = htmls
         self.txts = txts
@@ -26,22 +31,13 @@ class Scrape():
         # data
         self.csvs = csvs
         self.xmls = xmls
-        # media
-        self.imgs = imgs
-        self.mp3s = mp3s
-        self.mp4s = mp4s
 
     def report(self):
         print(f"Scrape Report from: {self.source}")
-        print(f"- number of urls: {len(self.urls)}")
-        print(f"- number of html urls: {len(self.htmls)}")
-        print(f"- number of txt urls: {len(self.txts)}")
-        print(f"- number of txt urls: {len(self.pdfs)}")
-        print(f"- number of csv urls: {len(self.csvs)}")
-        print(f"- number of xml urls: {len(self.xmls)}")
-        print(f"- number of img urls: {len(self.imgs)}")
-        print(f"- number of mp3 urls: {len(self.mp3s)}")
-        print(f"- number of mp4 urls: {len(self.mp4s)}")
+        for k,v in self.__dict__.items():
+            if k in ["self", "source"]:
+                continue 
+            print(f"- number of {k}: {len(v)}")
 
 class Pyderman():
 
@@ -55,9 +51,18 @@ class Pyderman():
         self.seen = set()
         self.scrapes = []
 
-        self._imgDir = "img"
         self._graphDir = "graph"
+        # 
+        self._imgDir = "img"
+        self._mp3Dir = "mp3"
+        self._mp4Dir = "mp4"
+        # 
+        self._htmlDir = "html"
+        self._txtDir = "txt"
+        self._pdfDir = "pdf"
+        # 
         self._csvDir = "csv"
+        self._xmlDir = "xml"
 
     def run(self):
         self.crawl(self.url, self.depth)
@@ -80,20 +85,31 @@ class Pyderman():
         soup = BeautifulSoup(html, 'html.parser')
 
         scrape = Scrape(source=url)
-
         urlBase = self._getBase(url)
 
         # url parsing
         scrape.urls = self.parseUrls(urlBase, soup)
-        # self._printAll(scrape.urls)
+        # url parsing
+        scrape.files = self.parseFiles(urlBase, soup)
 
-        # # imgs 
+        # imgs 
         scrape.imgs = self.parseImgs(urlBase, soup)
-        # # self._printAll(scrape.imgs)
+        # mp3s
+        scrape.mp3s = self.parseMp3s(urlBase, soup)
+        # mp4s
+        scrape.mp4s = self.parseMp4s(urlBase, soup)
+
+        # htmls
+        scrape.htmls = self.parseHtmls(urlBase, soup)
+        # txts
+        scrape.txts = self.parseTxts(urlBase, soup)    
+        # pdfs
+        scrape.pdfs = self.parsePdfs(urlBase, soup)
 
         # csvs 
         scrape.csvs = self.parseCsvs(urlBase, soup)
-        # self._printAll(scrape.csvs)
+        # xmls
+        scrape.xmls = self.parseXmls(urlBase, soup)
 
         return scrape
 
@@ -113,33 +129,56 @@ class Pyderman():
 
     # Parse Methods
 
+    def parseUrls(self, urlbase, soup):
+        urls = soup.find_all("a")
+        urls = [url.get("href") for url in urls]
+        urls = [url if not self._hasExtension(url) else None for url in urls]
+        urls = self.clean(urls, urlbase)
+        return urls
+
+    def parseFiles(self, urlbase, soup):
+        urls = soup.find_all("a")
+        urls = [url.get("href") for url in urls]
+        urls = [url if self._hasExtension(url) else None for url in urls]
+        urls = self.clean(urls, urlbase)
+        return urls
+    # 
     def parseImgs(self, urlbase, soup):
         urls = soup.find_all("img")
         urls = [url.get("src") or url.get("data-lazyload") for url in urls]
         urls = self.clean(urls, urlbase)
         return urls
-
-    def parseUrls(self, urlbase, soup):
-        urls = soup.find_all("a")
-        urls = [url.get("href") for url in urls]
-        urls = self.clean(urls, urlbase)
-        return urls
         
+    def parseMp3s(self, urlbase, soup):
+        return self.parseFiletype(urlbase, soup, ".mp3")
+
+    def parseMp4s(self, urlbase, soup):
+        return self.parseFiletype(urlbase, soup, ".mp4")
+    
+    # 
+    def parseHtmls(self, urlbase, soup):
+        return self.parseFiletype(urlbase, soup, ".html")
+
     def parseTxts(self, urlbase, soup):
-        pass        
+        return self.parseFiletype(urlbase, soup, ".txt")
+
+    def parsePdfs(self, urlbase, soup):
+        return self.parseFiletype(urlbase, soup, ".pdf")
+
+    # 
+    def parseCsvs(self, urlbase, soup):
+        return self.parseFiletype(urlbase, soup, ".csv")
 
     def parseXmls(self, urlbase, soup):
-        pass
+        return self.parseFiletype(urlbase, soup, ".xml")
 
-    def parseCsvs(self, urlbase, soup):
+
+    def parseFiletype(self, urlbase, soup, ext):
         urls = soup.find_all("a")
         urls = [url.get("href") for url in urls]
-        urls = [url if self._isType(url, ".csv") else None for url in urls]
+        urls = [url if self._isType(url, ext) else None for url in urls]
         urls = self.clean(urls, urlbase)
         return urls
-        
-    def parsePdfs(self,urlbase, soup):
-        pass
 
     def clean(self, urls, urlbase):
         cleaned = set()
@@ -162,28 +201,6 @@ class Pyderman():
 
     # Save Methods
 
-    def saveImages(self):
-        print("Saving All Images")
-        for scrape in tqdm(self.scrapes):
-            print(f"Saving images from: {scrape.source}")
-            self.saveImagesForScrape(scrape)
-
-    def saveImagesForScrape(self, scrape):
-        base = self._slugify(scrape.source)
-        source = self._slugify(self.url)
-        base = source+"/"+self._imgDir+"/"+base
-        if not os.path.exists(base):
-            os.makedirs(base)
-        
-        for img in scrape.imgs:	
-            try:
-                response = requests.get(img, stream=True)
-                with open(base+"/"+str(uuid.uuid4())+"_"+img[img.rfind("/")+1:], 'wb') as out_file:
-                    shutil.copyfileobj(response.raw, out_file)
-                del response
-            except Exception as e:
-                print(f"error downloading: {img} with error {e}")
-
     def saveGraph(self):
         print("Saving All Graphs")
         for scrape in tqdm(self.scrapes):
@@ -196,34 +213,96 @@ class Pyderman():
         base = source+"/"+self._graphDir+"/"+slug
         if not os.path.exists(base):
             os.makedirs(base)
-
         with open(base+"/"+'graph.csv', 'w', newline='\n') as csvfile:
             writer = csv.writer(csvfile)
             for url in scrape.urls:
                 writer.writerow([slug,scrape.source,url])
 
-    def saveCsv(self):
-        print("Saving All Csvs")
+    # 
+    def saveImages(self):
+        print("Saving All Images")
         for scrape in tqdm(self.scrapes):
-            print(f"Saving csv from: {scrape.source}")
-            self.saveCsvForScrape(scrape)
+            print(f"Saving images from: {scrape.source}")
+            self.saveImagesForScrape(scrape)
 
-    def saveCsvForScrape(self, scrape):
-        slug = self._slugify(scrape.source)
+    def saveImagesForScrape(self, scrape):
+        base = self._slugify(scrape.source)
         source = self._slugify(self.url)
-        base = source+"/"+self._csvDir+"/"+slug
+        base = source+"/"+self._imgDir+"/"+base
         if not os.path.exists(base):
             os.makedirs(base)
-
-        for file in scrape.csvs: 
-            csvSlug = self._slugify(file)    
+        for img in scrape.imgs:	
             try:
-                response = requests.get(file, stream=True)
-                with open(base+"/"+csvSlug+".csv", 'wb') as out_file:
+                response = requests.get(img, stream=True)
+                with open(base+"/"+str(uuid.uuid4())+"_"+img[img.rfind("/")+1:], 'wb') as out_file:
                     shutil.copyfileobj(response.raw, out_file)
                 del response
             except Exception as e:
+                print(f"error downloading: {img} with error {e}")
+
+    def saveMp3(self):
+        print("Saving All MP3 Files")
+        for scrape in self.scrapes:
+            print(f"Saving mp3 files from: {scrape.source}")
+            self.saveFilesForScrape(scrape.source, self._mp3Dir, scrape.mp3s)
+
+    def saveMp4(self):
+        print("Saving All MP4 Files")
+        for scrape in self.scrapes:
+            print(f"Saving mp4 files from: {scrape.source}")
+            self.saveFilesForScrape(scrape.source, self._mp4Dir, scrape.mp4s)
+
+    # 
+    def saveHtml(self):
+        print("Saving All Html Files")
+        for scrape in self.scrapes:
+            print(f"Saving html files from: {scrape.source}")
+            self.saveFilesForScrape(scrape.source, self._htmlDir, scrape.htmls)
+
+    def saveTxt(self):
+        print("Saving All Text Files")
+        for scrape in self.scrapes:
+            print(f"Saving text files from: {scrape.source}")
+            self.saveFilesForScrape(scrape.source, self._txtDir, scrape.txts)
+
+    def savePdf(self):
+        print("Saving All Pdf Files")
+        for scrape in self.scrapes:
+            print(f"Saving pdf files from: {scrape.source}")
+            self.saveFilesForScrape(scrape.source, self._pdfDir, scrape.pdfs)
+
+    # 
+    def saveCsv(self):
+        print("Saving All Csv Files")
+        for scrape in self.scrapes:
+            print(f"Saving csv files from: {scrape.source}")
+            self.saveFilesForScrape(scrape.source, self._csvDir, scrape.csvs)
+
+    def saveXml(self):
+        print("Saving All Xml Files")
+        for scrape in self.scrapes:
+            print(f"Saving xml files from: {scrape.source}")
+            self.saveFilesForScrape(scrape.source, self._xmlDir, scrape.xmls)
+
+
+
+    def saveFilesForScrape(self, source, direct, urls ):
+        slug = self._slugify(source)
+        source = self._slugify(self.url)
+        base = source+"/"+direct+"/"+slug
+        if not os.path.exists(base):
+            os.makedirs(base)
+        for file in tqdm(urls): 
+            filename = self._slugify(file)    
+            extension = self._getExtension(file)
+            try:
+                response = urllib.request.urlopen(file)
+                with open(base+"/"+filename+extension, 'wb') as out_file:
+                    shutil.copyfileobj(response, out_file)
+                del response
+            except Exception as e:
                 print(f"error downloading: {file} with error {e}")
+
 
     # Helper
     
@@ -269,40 +348,54 @@ class Pyderman():
             return False
 
     def _getExtension(self, url):
+        if not url:
+            return False
         foundExt = os.path.splitext(url)
         return foundExt[1]
 
     def _isType(self, url, ext):
+        if not url:
+            return False
         foundExt = os.path.splitext(url)
-        return foundExt[1] == ext
+        return foundExt[1].lower() == ext
 
     def _hasExtension(self, url):
+        if not url:
+            return False
         foundExt = os.path.splitext(url)
         return foundExt[1] != ""
 
 if __name__ == "__main__":
     print("My spidey senses are tingling")
 
-    # url = "https://www.google.com/"
-    url = "https://support.spatialkey.com/spatialkey-sample-csv-data/"
-
+    url = "https://www.google.com/"
+    
     parser = Pyderman(url=url, depth=0)
     parser.run()
-
-    ##IMAGES
-    # parser.saveImages()	
-
-    ##GRAPH
-    # parser.saveGraph()
-
-    ##CSV
-    # parser.saveCsv()
 
     ##Print Out Report 
     for scrape in parser.scrapes:
         scrape.report()
 
-    # TODO
-    # 1. Be able to limit crawling to internal links vs internal and external links
-    # 2. Be able to scrape for files such as txt, csv, and xml
+    ##GRAPH
+    # parser.saveGraph()
+
+    ##IMAGES
+    # parser.saveImages()	
+    ##MP3
+    # parser.saveMp3()
+    ##MP4
+    # parser.saveMp4()
+
+    ##HTML
+    # parser.saveHtml()
+    ##TXT
+    # parser.saveTxt()
+    ##PDF
+    # parser.savePdf()
+
+    ##CSV
+    # parser.saveCsv()
+    ##XML
+    # parser.saveXml()
 
