@@ -226,6 +226,9 @@ class Pyderman():
             self.saveImagesForScrape(scrape)
 
     def saveImagesForScrape(self, scrape):
+        if len(scrape.imgs) == 0:
+            print(f"No items found from {scrape.source}")
+            return
         base = self._slugify(scrape.source)
         source = self._slugify(self.url)
         base = source+"/"+self._imgDir+"/"+base
@@ -287,6 +290,9 @@ class Pyderman():
 
 
     def saveFilesForScrape(self, source, direct, urls ):
+        if len(urls) == 0:
+            print(f"No items found from {source}")
+            return
         slug = self._slugify(source)
         source = self._slugify(self.url)
         base = source+"/"+direct+"/"+slug
@@ -369,13 +375,15 @@ if __name__ == "__main__":
     print("My spidey senses are tingling")
 
     url = "https://www.google.com/"
-    
-    parser = Pyderman(url=url, depth=0)
+
+    parser = Pyderman(url=url, depth=1)
     parser.run()
 
     ##Print Out Report 
     for scrape in parser.scrapes:
         scrape.report()
+        for i in scrape.files:
+            print(i)
 
     ##GRAPH
     # parser.saveGraph()
