@@ -104,6 +104,12 @@ class Pyderman():
         except:
             return html
 
+    # Eval
+
+    def info(self):
+        for i in self.scrapes:
+            i.report()
+
     # Parse Methods
 
     def parseUrls(self, urlbase, soup):
