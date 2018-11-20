@@ -62,10 +62,27 @@ class Pyderman():
                 self.crawl(i, depth-1)
 
     def scrape(self, url):
-        html = self.grab(url)
-        self.content = html
-        soup = BeautifulSoup(html, 'html.parser')
-        self.bs = soup
+        content = self.grab(url)
+        if self._isJson(content):
+            return self.scrapeJson(content, url)
+        elif self._isXml(content) or self._isHtml(content):
+            return self.scrapeHtXml(content, url)
+
+    def scrapeJson(self, content, url):
+        soup = json.loads(content)
+
+        scrape = Scrape(source=url)
+        urlBase = self._getBase(url)
+
+        for key, value in soup.items():
+            print(f"{key}, {value}")
+
+        # todo build scraper for json
+
+        return scrape
+
+    def scrapeHtXml(self, content, url):
+        soup = BeautifulSoup(content, 'html.parser')
 
         scrape = Scrape(source=url)
         urlBase = self._getBase(url)
