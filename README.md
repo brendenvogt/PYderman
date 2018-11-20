@@ -8,6 +8,7 @@ Pyderman supports image files, .mp3, .mp4, .html, .txt, .pdf, .csv, and .xml fil
 Setting `depth=0` means no crawling, only scraping that current page.<br/>
 Setting `depth=1` means scraping and crawling the current page, and the direct links from that page.<br/>
 Setting `depth=100` may set your computer on fire. 😂
+#### Currently working on...
 * Adding support for json and xml parsing
 #### Roadmap for the future...
 * Make a crawler to find api endpoints that return xml or json, then auto document them.
