@@ -14,6 +14,9 @@ import csv
 from slugify import slugify
 from tqdm import tqdm
 
+import json
+import xml.etree.ElementTree as ET
+
 from Scrape import Scrape
 
 
@@ -60,7 +63,9 @@ class Pyderman():
 
     def scrape(self, url):
         html = self.grab(url)
+        self.content = html
         soup = BeautifulSoup(html, 'html.parser')
+        self.bs = soup
 
         scrape = Scrape(source=url)
         urlBase = self._getBase(url)
@@ -351,6 +356,23 @@ class Pyderman():
             return False
         foundExt = os.path.splitext(url)
         return foundExt[1] != ""
+
+    def _isJson(self, content):
+        try:
+            json.loads(content)
+            return True
+        except:
+            return False
+
+    def _isXml(self, content):
+        try:
+            ET.ElementTree(ET.fromstring(content))
+            return True
+        except:
+            return False
+
+    def _isHtml(self, content):
+        return bool(BeautifulSoup(content, "html.parser").find() and not self._isXml(content))
 
 
 if __name__ == "__main__":
