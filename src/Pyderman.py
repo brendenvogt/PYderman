@@ -14,6 +14,8 @@ import csv
 from slugify import slugify
 from tqdm import tqdm
 
+import re
+
 import json
 import xml.etree.ElementTree as ET
 
@@ -69,17 +71,38 @@ class Pyderman():
             return self.scrapeHtXml(content, url)
 
     def scrapeJson(self, content, url):
-        soup = json.loads(content)
+
+        urls = self._getUrls(str(content))
+
+        # soup = json.loads(content)
+        # urls = self.grabJsonUrls(soup)
 
         scrape = Scrape(source=url)
+
+        scrape.urls = urls
+
         urlBase = self._getBase(url)
 
-        for key, value in soup.items():
-            print(f"{key}, {value}")
-
-        # todo build scraper for json
-
         return scrape
+
+    def grabJsonUrls(self, items):
+        result = []
+        if (type(items) == list):
+            for i in items:
+                return self.grabJsonUrls(i) + result
+        elif (type(items) == dict):
+            for key, value in items.items():
+                if (type(value) == dict or type(value) == list):
+                    result = result + self.grabJsonUrls(value)
+                elif (type(value) != str):
+                    continue
+                else:
+                    if (self._isAbsoluteUrl(value)):
+                        result.append(value)
+                    # elif (self._isRelativeUrl(value)):
+                    #     absolute = self._makeAbsolute(self.url, value)
+                    #     result.append(absolute)
+        return result
 
     def scrapeHtXml(self, content, url):
         soup = BeautifulSoup(content, 'html.parser')
@@ -190,7 +213,7 @@ class Pyderman():
         for url in urls:
             if url:
 
-                if self._isRelative(url):
+                if self._isRelativeUrl(url):
                     url = urljoin(urlbase, url)
 
                 if len(url) > 2 and url[:2] == "//":
@@ -328,14 +351,20 @@ class Pyderman():
         split_url = urlsplit(url)
         return split_url.netloc
 
+    def _makeAbsolute(self, url, path):
+        split_url = urlsplit(url)
+        scheme = ""
+        if (split_url.scheme != ""):
+            scheme = split_url.scheme + "://"
+        path = "/"+str(path).strip("/")
+        result = scheme + split_url.hostname + path
+        return result
+
     def _getBase(self, url):
         split_url = urlsplit(url)
         clean_url = urlunsplit(
             (split_url.scheme, split_url.netloc, "", "", ""))
         return clean_url
-
-    def _isRelative(self, url):
-        return self._getBase(url) == ""
 
     def _getDateTime(self):
         return datetime.utcnow().strftime("%d-%m-%y-%H-%M-%S")
@@ -390,6 +419,21 @@ class Pyderman():
 
     def _isHtml(self, content):
         return bool(BeautifulSoup(content, "html.parser").find() and not self._isXml(content))
+
+    def _isAbsoluteUrl(self, url):
+        m = re.search('([a-z0-9]*:|.{0})\/\/.*', str(url))
+        return bool(m)
+
+    def _isRelativeUrl(self, url):
+        m = re.search('[^\/]+\/[^\/].*$|^\/[^\/].*', url)
+        return bool(m)
+
+    def _getUrls(self, content):
+        m = re.findall(
+            r"((?:[a-z0-9]*:|.{0})\/\/[a-zA-Z0-9\.\/\=\?\&\#\$\-\_\+\!\*\'\(\)\,]*)", content)
+        if m:
+            return m
+        return []
 
 
 if __name__ == "__main__":
