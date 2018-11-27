@@ -25,7 +25,7 @@ from Pyderman import Pyderman
 ```
 ### Set Start Url
 ```python
-url = "https://www.google.com/"
+url = "https://en.wikipedia.org/wiki/Spider"
 ```
 ### Create Object and Set Config
 ```python
